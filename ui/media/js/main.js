@@ -57,6 +57,7 @@ const taskConfigSetup = {
 
 let imageCounter = 0
 let imageRequest = []
+let SHOW_PROGRESS = true
 
 let promptField = document.querySelector("#prompt")
 let promptsFromFileSelector = document.querySelector("#prompt_from_file")
@@ -816,6 +817,9 @@ function getTaskUpdater(task, reqBody, outputContainer) {
                 stepUpdate.total_steps * (batchCount - task.batchesDone) // Initial value at (unstarted task count * Nbr of steps)
             )
             const percent = Math.min(100, 100 * (overallStepCount / totalSteps)).toFixed(0)
+            if (SHOW_PROGRESS) {
+                document.title = `${percent}% - Easy Diffusion` 
+            }
 
             const timeTaken = stepUpdate.step_time // sec
             const stepsRemaining = Math.max(0, totalSteps - overallStepCount)
@@ -849,6 +853,9 @@ function abortTask(task) {
             console.error(e)
         }
     })
+    if (SHOW_PROGRESS) {
+        document.title = "Stopped - Easy Diffusion"
+    }
 }
 
 function onTaskErrorHandler(task, reqBody, instance, reason) {
@@ -953,6 +960,9 @@ function onTaskCompleted(task, reqBody, instance, outputContainer, stepUpdate) {
 
     if (isSoundEnabled()) {
         playSound()
+    }
+    if (SHOW_PROGRESS) {
+        document.title = "Completed - Easy Diffusion"
     }
 }
 
