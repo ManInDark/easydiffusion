@@ -71,32 +71,6 @@
                     <div class="collapsible-content">
                         <textarea id="negative_prompt" name="negative_prompt" placeholder="list the things to remove from the image (e.g. fog, green)"></textarea>
                     </div>
-                    <div id="editor-modifiers">
-                        <div id="editor-modifiers-header">
-                            <div id="modifiers-header-left">
-                                <h4>Image Modifiers</h4>
-                                <span>(drawing style, camera, etc.)</span>
-                            </div>
-                            <div id="modifiers-header-right">
-                                <i id="modifier-settings-btn" class="fa-solid fa-gear section-button">
-                                    <span class="simple-tooltip left">
-                                        Add Custom Modifiers
-                                    </span>
-                                </i>
-                                <i id="modifiers-container-size-btn" class="fa-solid fa-expand"></i>
-                                <i id="modifiers-close-button" class="fa-solid fa-xmark fa-lg"></i>
-                            </div>
-                        </div>
-                        <div id="editor-modifiers-subheader">
-                            <div id="modifiers-action-collapsibles-btn">
-                                <i class="modifiers-action-icon fa-solid fa-square-plus"></i> 
-                                <span class="modifiers-action-text">
-                                    Expand Categories
-                                </span>
-                            </div>
-                        </div>
-                        <div id="editor-modifiers-entries" class="collapsible-content"></div>
-                    </div>
                 </div>
 
                 <div id="editor-inputs-init-image" class="row">
@@ -104,7 +78,7 @@
 
                     <div id="init_image_preview_container" class="image_preview_container">
                         <div id="init_image_wrapper">
-                            <img id="init_image_preview" src="" />
+                            <img id="init_image_preview" src="" crossorigin="anonymous" />
                             <span id="init_image_size_box" class="img_bottom_label"></span>
                             <button class="init_image_clear image_clear_btn"><i class="fa-solid fa-xmark"></i></button>
                         </div>
@@ -339,7 +313,7 @@
             <div id="preview-content">
                 <div id="preview-tools" class="displayNone">
                     <button id="clear-all-previews" class="secondaryButton"><i class="fa-solid fa-trash-can icon"></i> Clear All</button>
-                    <button class="tertiaryButton" id="show-download-popup"><i class="fa-solid fa-download"></i> Download images</button>
+                    <button class="tertiaryButton" id="show-download-dialog"><i class="fa-solid fa-download"></i> Download images</button>
                     <div class="display-settings">
                         <button id="undo" class="displayNone primaryButton">
                             Undo <i class="fa-solid fa-rotate-left icon"></i>
@@ -490,31 +464,37 @@
         </div>
     </div>
 
-    <div class="popup" id="download-images-popup">
-        <div>
-            <i class="close-button fa-solid fa-xmark"></i>
-            <h1>Download all images</h1>
-            <div class="parameters-table">
-                <div>
-                    <div><i class="fa fa-file-zipper"></i></div>
-                    <div><label for="theme">Download as a ZIP file</label><small>Instead of downloading individual files, generate one zip file with all images</small></div>
-                    <div><div class="input-toggle"><input id="zip_toggle" name="zip_toggle" checked="" type="checkbox"><label for="zip_toggle"></label></div></div>
-                </div>
-                <div id="download-add-folders">
-                    <div><i class="fa fa-folder-tree"></i></div>
-                    <div><label for="theme">Add per-job folders</label><small>Place images into job folders</small></div>
-                    <div><div class="input-toggle"><input id="tree_toggle" name="tree_toggle" checked="" type="checkbox"><label for="tree_toggle"></label></div></div>
-                </div>
-                <div>
-                    <div><i class="fa fa-sliders"></i></div>
-                    <div><label for="theme">Add metadata files</label><small>For each image, also download a JSON file with all the settings used to generate the image</small></div>
-                    <div><div class="input-toggle"><input id="json_toggle" name="json_toggle" checked="" type="checkbox"><label for="json_toggle"></label></div></div>
-                </div>
+    <dialog id="download-images-dialog">
+        <div class="dialog-header">
+            <div class="dialog-header-left">
+                <h4>Download all images</h4>
+                <span></span>
             </div>
-            <br/>
+            <div>
+                <i id="download-images-close-button" class="fa-solid fa-xmark fa-lg"></i>
+            </div>
+        </div>
+        <div class="parameters-table">
+            <div>
+                <div><i class="fa fa-file-zipper"></i></div>
+                <div><label for="theme">Download as a ZIP file</label><small>Instead of downloading individual files, generate one zip file with all images</small></div>
+                <div><div class="input-toggle"><input id="zip_toggle" name="zip_toggle" checked="" type="checkbox"><label for="zip_toggle"></label></div></div>
+            </div>
+            <div id="download-add-folders">
+                <div><i class="fa fa-folder-tree"></i></div>
+                <div><label for="theme">Add per-job folders</label><small>Place images into job folders</small></div>
+                <div><div class="input-toggle"><input id="tree_toggle" name="tree_toggle" checked="" type="checkbox"><label for="tree_toggle"></label></div></div>
+            </div>
+            <div>
+                <div><i class="fa fa-sliders"></i></div>
+                <div><label for="theme">Add metadata files</label><small>For each image, also download a JSON file with all the settings used to generate the image</small></div>
+                <div><div class="input-toggle"><input id="json_toggle" name="json_toggle" checked="" type="checkbox"><label for="json_toggle"></label></div></div>
+            </div>
+        </div>
+        <div class="center">
             <button id="save-all-images" class="primaryButton"><i class="fa-solid fa-images"></i> Start download</button>
         </div>
-    </div>
+    </dialog>
     <div id="save-settings-config" class="popup">
         <div>
             <i class="close-button fa-solid fa-xmark"></i>
@@ -525,25 +505,62 @@
         </div>
     </div>
 
-    <div id="modifier-settings-config" class="popup" tabindex="0">
-        <div>
-            <i class="close-button fa-solid fa-xmark"></i>
-            <h1>Modifier Settings</h1>
-            <p>Set your custom modifiers (one per line)</p>
-            <textarea id="custom-modifiers-input" placeholder="Enter your custom modifiers, one-per-line" spellcheck="false"></textarea>
-            <p><small><b>Tip:</b> You can include special characters like {} () [] and |. You can also put multiple comma-separated phrases in a single line, to make a single modifier that combines all of those.</small></p>
-            <div id="editor-modifiers-entries-toolbar">
+    <div id="editor-modifiers">
+        <div id="editor-modifiers-header" class="dialog-header">
+            <div id="modifiers-header-left" class="dialog-header-left">
+                <h4>Image Modifiers</h4>
+                <span>(drawing style, camera, etc.)</span>
+            </div>
+            <div id="modifiers-header-right">
+                <i id="modifier-settings-btn" class="fa-solid fa-gear section-button">
+                    <span class="simple-tooltip left">
+                        Add Custom Modifiers
+                    </span>
+                </i>
+                <i id="modifiers-container-size-btn" class="fa-solid fa-expand"></i>
+                <i id="modifiers-close-button" class="fa-solid fa-xmark fa-lg"></i>
+            </div>
+        </div>
+        <div id="editor-modifiers-subheader">
+            <div id="modifiers-action-collapsibles-btn">
+                <i class="modifiers-action-icon fa-solid fa-square-plus"></i>
+                <span class="modifiers-action-text">
+                    Expand Categories
+                </span>
+            </div>
+            <div>
                 <label for="preview-image">Image Style:</label>
                 <select id="preview-image" name="preview-image" value="portrait">
                     <option value="portrait" selected="">Face</option>
                     <option value="landscape">Landscape</option>
                 </select>
-                &nbsp;
+            </div>
+            <div>
                 <label for="modifier-card-size-slider">Thumbnail Size:</label>
                 <input id="modifier-card-size-slider" name="modifier-card-size-slider" value="0" type="range" min="-2" max="3">
             </div>
         </div>
+        <div id="editor-modifiers-entries" class="collapsible-content"></div>
     </div>
+
+    <dialog id="modifier-settings-config">
+        <div id="modifier-settings-header" class="dialog-header">
+            <div id="modifier-settings-header-left" class="dialog-header-left">
+                <h4>Custom Modifiers</h4>
+                <span>Set your custom modifiers (one per line)</span>
+            </div>
+            <div id="modifier-settings-header-right">
+                <i id="modifier-settings-close-button" class="fa-solid fa-xmark fa-lg"></i>
+            </div>
+        </div>
+        <textarea id="custom-modifiers-input" placeholder="Enter your custom modifiers, one-per-line" spellcheck="false"></textarea>
+        <div>
+            <small>
+                <b>Tip:</b> You can include special characters like {} () [] and |. You can also put multiple comma-separated
+                phrases in a single line, to make a single modifier that combines all of those.
+            </small>
+        </div>
+    </dialog>
 
     <div id="image-editor" class="popup image-editor-popup">
         <div>

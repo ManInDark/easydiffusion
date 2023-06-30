@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import socket
 import sys
 import traceback
@@ -16,8 +17,6 @@ from rich.logging import RichHandler
 from rich.console import Console
 from rich.panel import Panel
 from sdkit.utils import log as sdkit_log  # hack, so we can overwrite the log config
-
-yaml = YAML()
 
 # Remove all handlers associated with the root logger object.
 for handler in logging.root.handlers[:]:
@@ -103,9 +102,16 @@ def init():
 
 
 def getConfig(default_val=APP_CONFIG_DEFAULTS):
-    config_yaml_path = os.path.join(CONFIG_DIR, "config.yaml")
+    config_yaml_path = os.path.join(CONFIG_DIR, "..", "config.yaml")
+
+    # migrate the old config yaml location
+    config_legacy_yaml = os.path.join(CONFIG_DIR, "config.yaml")
+    if os.path.isfile(config_legacy_yaml):
+        shutil.move(config_legacy_yaml, config_yaml_path)
+
     if os.path.isfile(config_yaml_path):
         try:
+            yaml = YAML()
             with open(config_yaml_path, "r", encoding="utf-8") as f:
                 config = yaml.load(f)
             if "net" not in config:
@@ -127,15 +133,18 @@ def getConfig(default_val=APP_CONFIG_DEFAULTS):
             config_json_path = os.path.join(CONFIG_DIR, "config.json")
             if not os.path.exists(config_json_path):
                 return default_val
-            else:
-                log.info("Converting old json config file to yaml")
-                with open(config_json_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-                # Save config in new format
-                setConfig(config)
-                os.rename(config_json_path, config_json_path + ".bak")
-                log.info("Saved old config.json as config.json.bak")
-                return getConfig(default_val)
+
+            log.info("Converting old json config file to yaml")
+            with open(config_json_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            # Save config in new format
+            setConfig(config)
+
+            with open(config_json_path + ".txt", "w") as f:
+                f.write("Moved to config.yaml inside the Easy Diffusion folder. You can open it in any text editor.")
+            os.remove(config_json_path)
+
+            return getConfig(default_val)
         except Exception as e:
             log.warn(traceback.format_exc())
             return default_val
@@ -143,10 +152,34 @@ def getConfig(default_val=APP_CONFIG_DEFAULTS):
 
 def setConfig(config):
     try:  # config.yaml
-        config_yaml_path = os.path.join(CONFIG_DIR, "config.yaml")
+        config_yaml_path = os.path.join(CONFIG_DIR, "..", "config.yaml")
+        yaml = YAML()
+
+        if not hasattr(config, "_yaml_comment"):
+            config_yaml_sample_path = os.path.join(CONFIG_DIR, "config.yaml.sample")
+
+            if os.path.exists(config_yaml_sample_path):
+                with open(config_yaml_sample_path, "r", encoding="utf-8") as f:
+                    commented_config = yaml.load(f)
+
+                for k in config:
+                    commented_config[k] = config[k]
+
+                config = commented_config
         yaml.indent(mapping=2, sequence=4, offset=2)
-        with open(config_yaml_path, "w", encoding="utf-8") as f:
+
+        try:
+            f = open(config_yaml_path + ".tmp", "w", encoding="utf-8")
             yaml.dump(config, f)
+        finally:
+            f.close()  # do this explicitly to avoid NUL bytes (possible rare bug when using 'with')
+
+        # verify that the new file is valid, and only then overwrite the old config file
+        # helps prevent the rare NUL bytes error from corrupting the config file
+        yaml = YAML()
+        with open(config_yaml_path + ".tmp", "r", encoding="utf-8") as f:
+            yaml.load(f)
+        shutil.move(config_yaml_path + ".tmp", config_yaml_path)
     except:
         log.error(traceback.format_exc())
 
@@ -182,10 +215,12 @@ def update_render_threads():
 def getUIPlugins():
     plugins = []
 
+    file_names = set()
     for plugins_dir, dir_prefix in UI_PLUGINS_SOURCES:
         for file in os.listdir(plugins_dir):
-            if file.endswith(".plugin.js"):
+            if file.endswith(".plugin.js") and file not in file_names:
                 plugins.append(f"/plugins/{dir_prefix}/{file}")
+                file_names.add(file)
 
     return plugins
 
