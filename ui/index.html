@@ -31,7 +31,7 @@
             <h1>
                 <img id="logo_img" src="/media/images/icon-512x512.png" >
                 Easy Diffusion
-                <small><span id="version">v2.5.42</span> <span id="updateBranchLabel"></span></small>
+                <small><span id="version">v2.5.43</span> <span id="updateBranchLabel"></span></small>
             </h1>
         </div>
         <div id="server-status">
@@ -244,6 +244,9 @@
                         <td><label for="hypernetwork_strength_slider">Hypernetwork Strength:</label></td>
                         <td> <input id="hypernetwork_strength_slider" name="hypernetwork_strength_slider" class="editor-slider" value="100" type="range" min="0" max="100"> <input id="hypernetwork_strength" name="hypernetwork_strength" size="4" pattern="^[0-9\.]+$" onkeypress="preventNonNumericalInput(event)"><br/></td>
                     </tr>
+                    <tr id="embeddings-container" class="pl-5 displayNone"><td><label for="embeddings-button">Embedding:</label></td><td>
+                        <button id="embeddings-button" class="tertiaryButton">Add embedding to prompt</button>
+                    </td></tr>
                     <tr id="tiling_container" class="pl-5"><td><label for="tiling">Seamless Tiling:</label></td><td>
                         <select id="tiling" name="tiling">
                             <option value="none" selected>None</option>
@@ -313,7 +316,7 @@
             <div id="preview-content">
                 <div id="preview-tools" class="displayNone">
                     <button id="clear-all-previews" class="secondaryButton"><i class="fa-solid fa-trash-can icon"></i> Clear All</button>
-                    <button class="tertiaryButton" id="show-download-dialog"><i class="fa-solid fa-download"></i> Download images</button>
+                    <button class="tertiaryButton" id="show-download-popup"><i class="fa-solid fa-download"></i> Download images</button>
                     <div class="display-settings">
                         <button id="undo" class="displayNone primaryButton">
                             Undo <i class="fa-solid fa-rotate-left icon"></i>
@@ -562,6 +565,26 @@
         </div>
     </dialog>
 
+    <dialog id="embeddings-dialog">
+        <div id="embeddings-dialog-header" class="dialog-header">
+            <div id="embeddings-dialog-header-left" class="dialog-header-left">
+                <h4>Embeddings</h4>
+                <span>Add embeddings to the prompt (click) or negative prompt (shift-click)</span>
+            </div>
+            <div id="embeddings-dialog-header-right">
+                <i id="embeddings-dialog-close-button" class="fa-solid fa-xmark fa-lg"></i>
+            </div>
+        </div>
+        <div>
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="embeddings-search-box" type="text" spellcheck="false" autocomplete="off" placeholder="Search...">
+            <span style="float:right;"><label>Mode:</label>&nbsp;<select id="embeddings-mode"><option value="insert">Insert at cursor position</option><option value="append">Append at the end</option></select>
+        </div>
+        <div id="embeddings-list">
+        </div>
+        </div>
+    </dialog>
+
     <div id="image-editor" class="popup image-editor-popup">
         <div>
             <i class="close-button fa-solid fa-xmark"></i>
@@ -624,7 +647,7 @@
 <script>
 async function init() {
     await initSettings()
-    await getModels()
+    await getModels(false)
     await getAppConfig()
     await loadUIPlugins()
     await loadModifiers()
@@ -639,6 +662,9 @@ async function init() {
         }
     })
     splashScreen()
+
+    // load models again, but scan for malicious this time
+    await getModels(true)
 
     // playSound()
 }
