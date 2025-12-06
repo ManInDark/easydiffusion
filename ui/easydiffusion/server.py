@@ -200,11 +200,13 @@ def set_app_config_internal(req: SetAppConfigRequest):
 
 
 def update_render_devices_in_config(config, render_devices):
-    if render_devices not in ("cpu", "auto") and not render_devices.startswith("cuda:"):
-        raise HTTPException(status_code=400, detail=f"Invalid render device requested: {render_devices}")
+    from easydiffusion.device_manager import validate_render_devices
 
-    if render_devices.startswith("cuda:"):
+    try:
         render_devices = render_devices.split(",")
+        validate_render_devices(render_devices)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     config["render_devices"] = render_devices
 
@@ -229,6 +231,7 @@ def read_web_data_internal(key: str = None, **kwargs):
             "hosts": app.getIPConfig(),
             "default_output_dir": output_dir,
             "enforce_output_dir": ("force_save_path" in config),
+            "enforce_output_metadata": ("force_save_metadata" in config),
         }
         system_info["devices"]["config"] = config.get("render_devices", "auto")
         return JSONResponse(system_info, headers=NOCACHE_HEADERS)
@@ -474,7 +477,6 @@ def modify_package_internal(package_name: str, req: dict):
 
 
 def get_sha256_internal(obj_path):
-    import hashlib
     from easydiffusion.utils import sha256sum
 
     path = obj_path.split("/")

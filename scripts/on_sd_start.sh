@@ -6,6 +6,7 @@ cp sd-ui-files/scripts/bootstrap.sh scripts/
 cp sd-ui-files/scripts/check_modules.py scripts/
 cp sd-ui-files/scripts/get_config.py scripts/
 cp sd-ui-files/scripts/config.yaml.sample scripts/
+     
 
 source ./scripts/functions.sh
 
@@ -18,6 +19,15 @@ conda activate || fail "Failed to activate conda"
 # remove the old version of the dev console script, if it's still present
 if [ -e "open_dev_console.sh" ]; then
     rm "open_dev_console.sh"
+fi
+
+if [ -e "ui/plugins/ui/merge.plugin.js" ]; then
+    rm "ui/plugins/ui/merge.plugin.js"
+fi
+
+# remove ui/easydiffusion/model_manager if it exists (since it's not supposed to be in the main branch as of now)
+if [ -e "ui/easydiffusion/model_manager" ]; then
+    rm -rf "ui/easydiffusion/model_manager"
 fi
 
 # set the correct installer path (current vs legacy)
@@ -40,6 +50,9 @@ fi
 # disable the legacy src and ldm folder (otherwise this prevents installing gfpgan and realesrgan)
 if [ -e "src" ]; then mv src src-old; fi
 if [ -e "ldm" ]; then mv ldm ldm-old; fi
+
+# this is outside check_modules.py to ensure that the required version of torchruntime is present
+python -m pip install -q "torchruntime>=1.28.0"
 
 cd ..
 # Download the required packages

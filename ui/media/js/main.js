@@ -51,6 +51,10 @@ const taskConfigSetup = {
         preserve_init_image_color_profile: "Preserve Color Profile",
         strict_mask_border: "Strict Mask Border",
         use_controlnet_model: "ControlNet Model",
+        control_alpha: {
+            label: "ControlNet Strength",
+            visible: ({ reqBody }) => !!reqBody?.use_controlnet_model,
+        },
     },
     pluginTaskConfig: {},
     getCSSKey: (key) =>
@@ -99,6 +103,8 @@ let controlImagePreview = document.querySelector("#control_image_preview")
 let controlImageClearBtn = document.querySelector(".control_image_clear")
 let controlImageContainer = document.querySelector("#control_image_wrapper")
 let controlImageFilterField = document.querySelector("#control_image_filter")
+let controlAlphaSlider = document.querySelector("#controlnet_alpha_slider")
+let controlAlphaField = document.querySelector("#controlnet_alpha")
 let applyColorCorrectionField = document.querySelector("#apply_color_correction")
 let strictMaskBorderField = document.querySelector("#strict_mask_border")
 let colorCorrectionSetting = document.querySelector("#apply_color_correction_setting")
@@ -129,6 +135,7 @@ let hypernetworkStrengthField = document.querySelector("#hypernetwork_strength")
 let outputFormatField = document.querySelector("#output_format")
 let outputLosslessField = document.querySelector("#output_lossless")
 let outputLosslessContainer = document.querySelector("#output_lossless_container")
+let enableVAETilingField = document.querySelector("#enable_vae_tiling")
 let blockNSFWField = document.querySelector("#block_nsfw")
 let showOnlyFilteredImageField = document.querySelector("#show_only_filtered_image")
 let updateBranchLabel = document.querySelector("#updateBranchLabel")
@@ -521,10 +528,10 @@ function showImages(reqBody, res, outputContainer, livePreview) {
                     { text: "Upscale", on_click: onUpscaleClick },
                     { text: "Fix Faces", on_click: onFixFacesClick },
                 ],
-                {
+                { 
                     text: "Use as Thumbnail",
                     on_click: onUseAsThumbnailClick,
-                    filter: (req, img) => "use_embeddings_model" in req,
+                    filter: (req, img) => "use_embeddings_model" in req || "use_lora_model" in req
                 },
             ]
 
@@ -614,6 +621,13 @@ function onUseAsInputClick(req, img) {
     initImagePreview.src = imgData
 
     maskSetting.checked = false
+
+    //Force the image settings size to match the input, as inpaint currently only works correctly
+    //if input image and generate sizes match.
+    addImageSizeOption(img.naturalWidth);
+    addImageSizeOption(img.naturalHeight);
+    widthField.value = img.naturalWidth;
+    heightField.value = img.naturalHeight;
 }
 
 function onUseForControlnetClick(req, img) {
@@ -758,25 +772,45 @@ function onUseAsThumbnailClick(req, img) {
         onUseAsThumbnailClick.croppr.setImage(img.src)
     }
 
-    let embeddings = req.use_embeddings_model.map((e) => e.split("/").pop())
-    let LORA = []
+    useAsThumbSelect.innerHTML=""
 
-    if ("use_lora_model" in req) {
-        LORA = req.use_lora_model
+    if ("use_embeddings_model" in req) {
+        let embeddings = req.use_embeddings_model.map((e) => e.split("/").pop())
+
+        let embOptions = document.createElement("optgroup")
+        embOptions.label = "Embeddings"
+        embOptions.replaceChildren(
+            ...embeddings.map((e) => {
+                let option = document.createElement("option")
+                option.innerText = e
+                option.dataset["type"] = "embeddings"
+                return option
+            })
+        )
+        useAsThumbSelect.appendChild(embOptions)
     }
 
-    let optgroup = document.createElement("optgroup")
-    optgroup.label = "Embeddings"
-    optgroup.replaceChildren(
-        ...embeddings.map((e) => {
-            let option = document.createElement("option")
-            option.innerText = e
-            option.dataset["type"] = "embeddings"
-            return option
-        })
-    )
 
-    useAsThumbSelect.replaceChildren(optgroup)
+    if ("use_lora_model" in req) {
+        let LORA = req.use_lora_model
+        if (typeof LORA == "string") {
+            LORA = [LORA]
+        }
+        LORA = LORA.map((e) => e.split("/").pop())
+
+        let loraOptions = document.createElement("optgroup")
+        loraOptions.label = "LORA"
+        loraOptions.replaceChildren(
+            ...LORA.map((e) => {
+                let option = document.createElement("option")
+                option.innerText = e
+                option.dataset["type"] = "lora"
+                return option
+            })
+        )
+        useAsThumbSelect.appendChild(loraOptions)
+    }
+
     useAsThumbDialog.showModal()
     onUseAsThumbnailClick.scale = scale
 }
@@ -792,6 +826,50 @@ useAsThumbCancelBtn.addEventListener("click", () => {
     useAsThumbDialog.close()
 })
 
+const Bucket = {
+    upload(path, blob) {
+        const formData = new FormData()
+        formData.append("file", blob)
+        return fetch(`bucket/${path}`, {
+            method: "POST",
+            body: formData,
+        })
+    },
+
+    getImageAsDataURL(path) {
+        return fetch(`bucket/${path}`)
+            .then((response) => {
+                if (response.status == 200) {
+                    return response.blob()
+                } else {
+                    throw new Error("Bucket error")
+                }
+            })
+            .then((blob) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onload = () => resolve(reader.result)
+                    reader.onerror = reject
+                    reader.readAsDataURL(blob)
+                })
+            })
+    },
+
+    getList(path) {
+        return fetch(`bucket/${path}`)
+            .then((response) => (response.status == 200 ? response.json() : []))
+    },
+
+    store(path, data) {
+        return Bucket.upload(`${path}.json`, JSON.stringify(data))
+    },
+
+    retrieve(path) {
+        return fetch(`bucket/${path}.json`)
+            .then((response) => (response.status == 200 ? response.json() : null))
+    },
+}
+
 useAsThumbSaveBtn.addEventListener("click", (e) => {
     let scale = 1 / onUseAsThumbnailClick.scale
     let crop = onUseAsThumbnailClick.croppr.getValue()
@@ -803,22 +881,18 @@ useAsThumbSaveBtn.addEventListener("click", (e) => {
         .then((thumb) => fetch(thumb))
         .then((response) => response.blob())
         .then(async function(blob) {
-            const formData = new FormData()
-            formData.append("file", blob)
             let options = useAsThumbSelect.selectedOptions
             let promises = []
             for (let embedding of options) {
                 promises.push(
-                    fetch(`bucket/${profileName}/${embedding.dataset["type"]}/${embedding.value}.png`, {
-                        method: "POST",
-                        body: formData,
-                    })
+                    Bucket.upload(`${profileName}/${embedding.dataset["type"]}/${embedding.value}.png`, blob)
                 )
             }
             return Promise.all(promises)
         })
         .then(() => {
             useAsThumbDialog.close()
+            document.dispatchEvent(new CustomEvent("saveThumb", { detail: useAsThumbSelect.selectedOptions }))
         })
         .catch((error) => {
             console.error(error)
@@ -1320,6 +1394,7 @@ function getCurrentUserRequest() {
         if (tilingField.value !== "none") {
             newTask.reqBody.tiling = tilingField.value
         }
+        newTask.reqBody.enable_vae_tiling = enableVAETilingField.checked
     }
     if (testDiffusers.checked && document.getElementById("toggle-tensorrt-install").innerHTML == "Uninstall") {
         // TRT is installed
@@ -1344,6 +1419,7 @@ function getCurrentUserRequest() {
     if (controlnetModelField.value !== "" && IMAGE_REGEX.test(controlImagePreview.src)) {
         newTask.reqBody.use_controlnet_model = controlnetModelField.value
         newTask.reqBody.control_image = controlImagePreview.src
+        newTask.reqBody.control_alpha = parseFloat(controlAlphaField.value)
         if (controlImageFilterField.value !== "") {
             newTask.reqBody.control_filter_to_apply = controlImageFilterField.value
         }
@@ -1965,6 +2041,27 @@ function updateHypernetworkStrengthContainer() {
 hypernetworkModelField.addEventListener("change", updateHypernetworkStrengthContainer)
 updateHypernetworkStrengthContainer()
 
+/********************* Controlnet Alpha **************************/
+function updateControlAlpha() {
+    controlAlphaField.value = controlAlphaSlider.value / 10
+    controlAlphaField.dispatchEvent(new Event("change"))
+}
+
+function updateControlAlphaSlider() {
+    if (controlAlphaField.value < 0) {
+        controlAlphaField.value = 0
+    } else if (controlAlphaField.value > 10) {
+        controlAlphaField.value = 10
+    }
+
+    controlAlphaSlider.value = controlAlphaField.value * 10
+    controlAlphaSlider.dispatchEvent(new Event("change"))
+}
+
+controlAlphaSlider.addEventListener("input", updateControlAlpha)
+controlAlphaField.addEventListener("input", updateControlAlphaSlider)
+updateControlAlpha()
+
 /********************* JPEG/WEBP Quality **********************/
 function updateOutputQuality() {
     outputQualityField.value = 0 | outputQualitySlider.value
@@ -2374,20 +2471,10 @@ function loadThumbnailImageFromFile() {
 }
 
 function updateEmbeddingsList(filter = "") {
-    function html(model, iconlist = [], prefix = "", filter = "") {
+    function html(model, iconMap = {}, prefix = "", filter = "") {
         filter = filter.toLowerCase()
         let toplevel = document.createElement("div")
         let folders = document.createElement("div")
-        let embIcon = Object.assign(
-            {},
-            ...iconlist.map((x) => ({
-                [x
-                    .toLowerCase()
-                    .split(".")
-                    .slice(0, -1)
-                    .join(".")]: x,
-            }))
-        )
 
         let profileName = profileNameField.value
         model?.forEach((m) => {
@@ -2395,13 +2482,9 @@ function updateEmbeddingsList(filter = "") {
                 let token = m.toLowerCase()
                 if (token.search(filter) != -1) {
                     let button
-                    // if (iconlist.length==0) {
-                    //     button = document.createElement("button")
-                    //     button.innerText = m
-                    // } else {
                     let img = "/media/images/noimg.png"
-                    if (token in embIcon) {
-                        img = `/bucket/${profileName}/embeddings/${embIcon[token]}`
+                    if (token in iconMap) {
+                        img = `/bucket/${profileName}/${iconMap[token]}`
                     }
                     button = createModifierCard(m, [img, img], true)
                     // }
@@ -2410,7 +2493,7 @@ function updateEmbeddingsList(filter = "") {
                     toplevel.appendChild(button)
                 }
             } else {
-                let subdir = html(m[1], iconlist, prefix + m[0] + "/", filter)
+                let subdir = html(m[1], iconMap, prefix + m[0] + "/", filter)
                 if (typeof subdir == "object") {
                     let div1 = document.createElement("div")
                     let div2 = document.createElement("div")
@@ -2469,11 +2552,44 @@ function updateEmbeddingsList(filter = "") {
         </div>
     `
 
+    let loraTokens = []
     let profileName = profileNameField.value
-    fetch(`/bucket/${profileName}/embeddings/`)
-        .then((response) => (response.status == 200 ? response.json() : []))
-        .then(async function(iconlist) {
-            embeddingsList.replaceChildren(html(modelsOptions.embeddings, iconlist, "", filter))
+    let iconMap = {}
+
+    Bucket.getList(`${profileName}/embeddings/`)
+        .then((icons) => {
+            iconMap = Object.assign(
+                {},
+                ...icons.map((x) => ({
+                    [x
+                        .toLowerCase()
+                        .split(".")
+                        .slice(0, -1)
+                        .join(".")]: `embeddings/${x}`,
+                }))
+            )
+
+            return Bucket.getList(`${profileName}/lora/`)
+        })
+        .then(async function (icons) {
+            for (let lora of loraModelField.value.modelNames) {
+                let keywords = await getLoraKeywords(lora)
+                loraTokens = loraTokens.concat(keywords)
+                let loraname = lora.split("/").pop()
+
+                if (icons.includes(`${loraname}.png`)) {
+                    keywords.forEach((kw) => {
+                        iconMap[kw.toLowerCase()] = `lora/${loraname}.png`
+                        
+                    })
+                }
+            }
+
+            let tokenList = [...modelsOptions.embeddings]
+            if (loraTokens.length != 0) {
+                tokenList.unshift(['LORA Keywords', loraTokens])
+            }
+            embeddingsList.replaceChildren(html(tokenList, iconMap, "", filter))
             createCollapsibles(embeddingsList)
             if (filter != "") {
                 embeddingsExpandAll()

@@ -17,6 +17,15 @@
 - **Major rewrite of the code** - We've switched to using diffusers under-the-hood, which allows us to release new features faster, and focus on making the UI and installer even easier to use.
 
 ### Detailed changelog
+* 3.0.9c - 6 Feb 2025 - (Internal code change) Remove hardcoded references to `torch.cuda`, and replace with torchruntime's device utilities.
+* 3.0.9b - 28 Jan 2025 - Fix a bug affecting older versions of Easy Diffusion, which tried to upgrade to an incompatible version of PyTorch.
+* 3.0.9b - 4 Jan 2025 - Replace the use of WMIC (deprecated) with a powershell call.
+* 3.0.9 - 28 May 2024 - Slider for controlling the strength of controlnets.
+* 3.0.8 - 27 May 2024 - SDXL ControlNets for Img2Img and Inpainting.
+* 3.0.7 - 11 Dec 2023 - Setting to enable/disable VAE tiling (in the Image Settings panel). Sometimes VAE tiling reduces the quality of the image, so this setting will help control that.
+* 3.0.6 - 18 Sep 2023 - Add thumbnails to embeddings from the UI, using the new `Upload Thumbnail` button in the Embeddings popup. Thanks @JeLuf.
+* 3.0.6 - 15 Sep 2023 - Fix broken embeddings dialog when LoRA information couldn't be fetched.
+* 3.0.6 - 14 Sep 2023 - UI for adding notes to LoRA files (to help you remember which prompts to use). Also added a button to automatically fetch prompts from Civitai for a LoRA file, using the `Import from Civitai` button. Thanks @JeLuf.
 * 3.0.5 - 2 Sep 2023 - Support SDXL ControlNets.
 * 3.0.4 - 1 Sep 2023 - Fix incorrect metadata generated for embeddings, when the exact word doesn't match the case, or is part of a larger word.
 * 3.0.4 - 1 Sep 2023 - Simplify the installation for AMD users on Linux. Thanks @JeLuf.

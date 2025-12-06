@@ -532,6 +532,10 @@ async function getAppConfig() {
             customHeightField.step = IMAGE_STEP_SIZE
         }
 
+        if (config.force_save_metadata) {
+            metadataOutputFormatField.value = config.force_save_metadata
+        }
+
         console.log("get config status response", config)
 
         return config
@@ -646,7 +650,7 @@ function setDeviceInfo(devices) {
 
     function ID_TO_TEXT(d) {
         let info = devices.all[d]
-        if ("mem_free" in info && "mem_total" in info) {
+        if ("mem_free" in info && "mem_total" in info && info["mem_total"] > 0) {
             return `${info.name} <small>(${d}) (${info.mem_free.toFixed(1)}Gb free / ${info.mem_total.toFixed(
                 1
             )} Gb total)</small>`
@@ -744,10 +748,13 @@ async function getSystemInfo() {
             force = res["enforce_output_dir"]
             if (force == true) {
                 saveToDiskField.checked = true
-                metadataOutputFormatField.disabled = false
+                metadataOutputFormatField.disabled = res["enforce_output_metadata"]
+                diskPathField.disabled = true
             }
             saveToDiskField.disabled = force
-            diskPathField.disabled = force
+        } else {
+            diskPathField.disabled = !saveToDiskField.checked
+            metadataOutputFormatField.disabled = !saveToDiskField.checked
         }
         setDiskPath(res["default_output_dir"], force)
     } catch (e) {

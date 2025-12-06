@@ -34,6 +34,10 @@ call conda activate
 
 @REM remove the old version of the dev console script, if it's still present
 if exist "Open Developer Console.cmd" del "Open Developer Console.cmd"
+if exist "ui\plugins\ui\merge.plugin.js" del "ui\plugins\ui\merge.plugin.js"
+
+@REM remove ui\easydiffusion\model_manager if it exists (since it's not supposed to be in the main branch as of now)
+if exist "ui\easydiffusion\model_manager" rmdir /S /Q "ui\easydiffusion\model_manager"
 
 @rem create the stable-diffusion folder, to work with legacy installations
 if not exist "stable-diffusion" mkdir stable-diffusion
@@ -65,11 +69,17 @@ set PYTHONNOUSERSITE=1
 set PYTHONPATH=%INSTALL_ENV_DIR%\lib\site-packages
 echo PYTHONPATH=%PYTHONPATH%
 
-@rem Download the required packages
-call where python
-call python --version
+set PYTHON=%INSTALL_ENV_DIR%\python.exe
+echo PYTHON=%PYTHON%
 
-call python scripts\check_modules.py --launch-uvicorn
+@rem Download the required packages
+@REM call where python
+call "%PYTHON%" --version
+
+@rem this is outside check_modules.py to ensure that the required version of torchruntime is present
+call "%PYTHON%" -m pip install -q "torchruntime>=1.28.0"
+
+call "%PYTHON%" scripts\check_modules.py --launch-uvicorn
 pause
 exit /b
 

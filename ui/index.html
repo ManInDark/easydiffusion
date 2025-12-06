@@ -36,7 +36,7 @@
             <h1>
                 <img id="logo_img" src="/media/images/icon-512x512.png" >
                 Easy Diffusion
-                <small><span id="version">v3.0.5</span> <span id="updateBranchLabel"></span></small>
+                <small><span id="version">v3.0.9c</span> <span id="updateBranchLabel"></span></small>
             </h1>
         </div>
         <div id="server-status">
@@ -239,6 +239,8 @@
                                 <label for="controlnet_model"><small>Model:</small></label> <input id="controlnet_model" type="text" spellcheck="false" autocomplete="off" class="model-filter" data-path="" />
                                 <br/>
                                 <label><small>Will download the necessary models, the first time.</small></label>
+                                <br/>
+                                <label for="controlnet_alpha_slider"><small>Strength:</small></label> <input id="controlnet_alpha_slider" name="controlnet_alpha_slider" class="editor-slider" value="10" type="range" min="0" max="10"> <input id="controlnet_alpha" name="controlnet_alpha" size="4" pattern="^[0-9\.]+$" onkeypress="preventNonNumericalInput(event)" inputmode="decimal">
                             </div>
                         </td>
                     </tr>
@@ -270,7 +272,7 @@
                             <option value="unipc_tu_2" class="k_diffusion-only">UniPC TU 2</option>
                             <option value="unipc_tq" class="k_diffusion-only">UniPC TQ</option>
                         </select>
-                        <a href="https://github.com/easydiffusion/easydiffusion/wiki/How-to-Use#samplers" target="_blank"><i class="fa-solid fa-circle-question help-btn"><span class="simple-tooltip top-left">Click to learn more about samplers</span></i></a>
+                        <a href="https://github.com/easydiffusion/easydiffusion/wiki/Samplers" target="_blank"><i class="fa-solid fa-circle-question help-btn"><span class="simple-tooltip top-left">Click to learn more about samplers</span></i></a>
                     </td></tr>
                     <tr class="pl-5"><td><label>Image Size: </label></td><td id="image-size-options">
                         <select id="width" name="width" value="512">
@@ -295,7 +297,9 @@
                             <option value="2048">2048</option>
                         </select>
                         <label id="widthLabel" for="width"><small><span>(width)</span></small></label>
-                        <span id="swap-width-height" class="clickable smallButton" style="margin-left: 2px; margin-right:2px;"><i class="fa-solid fa-right-left"><span class="simple-tooltip top-left"> Swap width and height </span></i></span>
+                        <div class="tooltip-container">
+                            <span id="swap-width-height" class="clickable smallButton" style="margin-left: 2px; margin-right:2px;"><i class="fa-solid fa-right-left"><span class="simple-tooltip top-left"> Swap width and height </span></i></span>
+                        </div>
                         <select id="height" name="height" value="512">
                             <option value="128">128</option>
                             <option value="192">192</option>
@@ -389,6 +393,13 @@
                     <tr class="pl-5" id="output_quality_row"><td><label for="output_quality">Image Quality:</label></td><td>
                     <input id="output_quality_slider" name="output_quality" class="editor-slider" value="75" type="range" min="10" max="95"> <input id="output_quality" name="output_quality" size="4" pattern="^[0-9\.]+$" onkeypress="preventNonNumericalInput(event)" inputmode="numeric">
                     </td></tr>
+                    <tr class="pl-5">
+                        <td><label for="tiling">Enable VAE Tiling:</label></td>
+                        <td class="diffusers-restart-needed">
+                            <input id="enable_vae_tiling" name="enable_vae_tiling" type="checkbox" checked>
+                            <label><small>Optimizes memory for larger images</small></label>
+                        </td>
+                    </tr>
                     </table></div>
 
                     <div><ul>
@@ -466,7 +477,7 @@
                     <div class="clearfix" style="clear: both;"></div>
                 </div>
                 <div id="supportBanner" class="displayNone">
-                    If you found this project useful and want to help keep it alive, please consider <a href="https://ko-fi.com/easydiffusion" target="_blank">buying me a coffee</a> or <a href="https://www.patreon.com/EasyDiffusion" target="_blank">supporting me on Patreon</a> to help cover the cost of development and maintenance! Or even better, <a href="https://cmdr2.itch.io/easydiffusion" target="_blank">donating the actual cost of this software</a>. Thanks for your support!
+                    If you found this project useful and want to help keep it alive, please consider <a href="https://ko-fi.com/easydiffusion" target="_blank">buying me a coffee</a> to help cover the cost of development and maintenance! Thanks for your support!
                 </div>
             </div>
         </div>
@@ -517,7 +528,7 @@
                             <ul>
                                 <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/How-To-Use" target="_blank">How to use</a></li>
                                 <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/Writing-Prompts" target="_blank">Writing prompts</a></li>
-                                <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/Image-Modifers" target="_blank">Image Modifiers</a></li>
+                                <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/Image-Modifiers" target="_blank">Image Modifiers</a></li>
                                 <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/Inpainting" target="_blank">Inpainting</a></li>
                                 <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/Samplers" target="_blank">Samplers</a></li>
                                 <li> <a href="https://github.com/easydiffusion/easydiffusion/wiki/UI-Overview" target="_blank">Summary of every UI option</a></li>
